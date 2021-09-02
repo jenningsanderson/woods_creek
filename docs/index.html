@@ -118,6 +118,10 @@
  	var playing=undefined
  	function play(el){
  		if (!playing){
+ 			if (ts_idx==TIMESTAMPS.length-1){
+ 				ts_idx=0
+ 				updateFilter()
+ 			}
  			el.innerHTML = '||'
  			playing = window.setInterval(function(){
  				nextTimestamp()
@@ -138,6 +142,10 @@
  		}
  		if (ts_idx==TIMESTAMPS.length-1){
  			document.getElementById('next').disabled=true
+ 			if (playing!=undefined){
+				window.clearInterval(playing)
+ 				document.getElementById('play').innerHTML = ">"
+ 			}
  		}else{
  			document.getElementById('next').disabled=false
  		}
