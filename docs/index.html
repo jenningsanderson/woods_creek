@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Woods Creek Fire Visualization</title>
+	<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+	<link href="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.css" rel="stylesheet">
+	<link href="https://api.mapbox.com/mapbox-assembly/v1.2.1/assembly.min.css" rel="stylesheet">
+	<script src="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.js"></script>
+	<script async defer src="https://api.mapbox.com/mapbox-assembly/v1.2.1/assembly.js"></script>
+	<script src="timestamps.jsonp"></script>
+	<style>
+		body { margin: 0; padding: 0; }
+		#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+		.marker {
+			display: block;
+			border: 2px solid white;
+			border-radius: 50%;
+			cursor: pointer;
+			padding: 0;
+		}
+		#timeline{
+			position: absolute;
+			top: 5; left: 5;
+			/*height: 175px;*/
+			width: 180px;
+			padding: 10px;
+			background: rgba(100,100,100,0.9);
+			border: 2px solid white;
+			border-radius: 3px;
+			color:  white;
+			font-family: sans-serif;
+		}
+		#date{
+			border-top: 1px solid grey;
+			padding-top: 5px;
+			margin-bottom: 10px;
+		}
+	</style>
+</head>
+<body>
+<div id="map"></div>
+<div id='timeline'>
+	<h3>Woods Creek Fire</h3>
+	<p>Heat Perimeter</p>
+	<h5 id='date' class='loading'></h5>
+	<button id='prev' class='btn btn--s' onclick="prevTimestamp(this)">Prev</button>
+	<button id='next' class='btn btn--s' onclick="nextTimestamp(this)">Next</button>
+	<button id='play' class='btn btn--s' onclick="play(this)">></button>
+	<button id='inciweb' class='btn btn--s mt12' onclick="loadInciweb(this)">Load Latest from Inciweb</button>
+	<p class='mt12'>Scenes:</p>
+	<button id='1' class='btn btn--s mt12' onclick="flyOut(this)">10000ft</button>
+	<button id='2' class='btn btn--s mt12' onclick="flyStart(this)">Start</button>
+	<button id='3' class='btn btn--s mt12' onclick="flyHut(this)">Hut</button>
+	
+</div>
+ <script>
+
+ 	function flyHut(){
+ 		map.flyTo({
+			center : [-111.2329,46.46784],
+			zoom: 14.8,
+			bearing: -85.6,
+			pitch: 72,
+			speed: 0.3, // make the flying slow
+			curve: 1,
+			// This can be any easing function: it takes a number between
+			// 0 and 1 and returns another number between 0 and 1.
+			easing: (t) => t,
+ 
+			// this animation is considered essential with respect to prefers-reduced-motion
+			essential: true
+		});
+ 	}
+
+ 	function flyStart(){
+ 		ts_idx = 0
+ 		updateFilter()
+ 		map.flyTo({
+			center : [-111.34523,46.5598],
+			zoom: 13.7,
+			bearing: -58,
+			pitch: 35,
+			speed: 0.5, // make the flying slow
+			curve: 1,
+			easing: (t) => t,
+			essential: true
+		});
+ 	}
+
+ 	function flyOut(){
+ 		map.flyTo({
+			center : [-111.211,46.5232],
+			zoom: 11.46,
+			bearing: -57.2,
+			pitch: 39,
+			speed: 0.4, // make the flying slow
+			curve: 1,
+			easing: (t) => t,
+			essential: true
+		});
+ 	}
+
+ 	function prevTimestamp(el){
+ 		if (ts_idx>0){
+ 			ts_idx-=1
+ 			updateFilter()
+ 		}
+ 	}
+
+ 	function nextTimestamp(el){
+ 		if (ts_idx<TIMESTAMPS.length-1){
+ 			ts_idx+=1
+ 			updateFilter()
+ 		}
+ 	}
+
+ 	var playing=undefined
+ 	function play(el){
+ 		if (!playing){
+ 			el.innerHTML = '||'
+ 			playing = window.setInterval(function(){
+ 				nextTimestamp()
+ 			},1000)
+ 		}else{
+ 			window.clearInterval(playing)
+ 			playing=undefined
+ 			el.innerHTML = ">"
+ 		}
+ 	}
+
+ 	function updateFilter(){
+
+ 		if (ts_idx==0){
+ 			document.getElementById('prev').disabled=true
+ 		}else{
+ 			document.getElementById('prev').disabled=false
+ 		}
+ 		if (ts_idx==TIMESTAMPS.length-1){
+ 			document.getElementById('next').disabled=true
+ 		}else{
+ 			document.getElementById('next').disabled=false
+ 		}
+
+		map.setFilter('heat_perimeter', 
+			['==', ['get', 'timestamp'], TIMESTAMPS[ts_idx]]);
+		const options = { weekday: 'short', month: 'short', day: 'numeric', hour:'numeric' };
+		var d = document.getElementById('date')
+		d.className='txt-h5'
+		d.innerHTML = (new Date(TIMESTAMPS[ts_idx] * 1000)).toLocaleDateString(undefined, options)
+ 	}
+
+ 	function loadInciweb(el){
+ 		if (inciweb=='none'){
+ 			inciweb = 'visible'
+ 			map.setLayoutProperty('latest_heat_perimeter','visibility',inciweb)
+ 			el.innerHTML = 'Hide Latest from Inciweb'
+		}else{
+			inciweb = 'none'
+			map.setLayoutProperty('latest_heat_perimeter','visibility',inciweb)
+			el.innerHTML = 'Load Latest from Inciweb'
+		}
+ 	}
+
+ 	let urlParams = new URLSearchParams(window.location.search);
+
+ 	let inciweb = urlParams.get('inciweb') || 'none';
+	let ts_idx  = Number(urlParams.get('ts_idx')) || TIMESTAMPS.length-1;
+
+	mapboxgl.accessToken = 'pk.eyJ1IjoiamVubmluZ3NhbmRlcnNvbiIsImEiOiIzMHZndnpvIn0.PS-j7fRK3HGU7IE8rbLT9A';
+	const map = new mapboxgl.Map({
+		container: 'map',
+		zoom: 12.9,
+		center: [-111.23, 46.47],
+		pitch: 67,
+		bearing: -68,
+		hash: true,
+		style: 'mapbox://styles/mapbox-map-design/ckhqrf2tz0dt119ny6azh975y'
+	});
+
+	 
+	map.on('load', () => {
+			map.addSource('mapbox-dem', {
+			'type': 'raster-dem',
+			'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+			'tileSize': 512,
+			'maxzoom': 14
+		});
+		
+		// add the DEM source as a terrain layer with exaggerated height
+		map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
+ 
+		// add a sky layer that will show when the map is highly pitched
+		map.addLayer({
+			'id': 'sky',
+			'type': 'sky',
+			'paint': {
+				'sky-type': 'atmosphere',
+				'sky-atmosphere-sun': [0.0, 0.0],
+				'sky-atmosphere-sun-intensity': 15
+			}
+		});
+
+		map.addLayer({
+			'id':'heat_perimeter',
+			'type':'fill',
+			'source':{
+				'type':'geojson',
+				'data':'heat_perimeter.geojson'
+			},
+			'paint':{
+				'fill-color':'orangered',
+				'fill-opacity':0.85
+			}
+		})
+
+		//Latest is obtained from this URL: 
+		const latest_URL = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/CY_WildlandFire_Perimeters_ToDate/FeatureServer/0/query?f=geojson&returnGeometry=true&spatialRel=esriSpatialRelIntersects&geometry=%7B%22xmin%22%3A-12386467.5595661%2C%22ymin%22%3A5850795.8930791%2C%22xmax%22%3A-12366899.68032512%2C%22ymax%22%3A5870363.772320081%2C%22spatialReference%22%3A%7B%22wkid%22%3A102100%2C%22latestWkid%22%3A3857%7D%7D&geometryType=esriGeometryEnvelope&inSR=102100&outFields=OBJECTID&outSR=4326&resultType=tile&quantizationParameters=%7B%22mode%22%3A%22view%22%2C%22originPosition%22%3A%22upperLeft%22%2C%22tolerance%22%3A38.21851414253719%2C%22extent%22%3A%7B%22type%22%3A%22extent%22%2C%22xmin%22%3A-180%2C%22ymin%22%3A-90%2C%22xmax%22%3A180%2C%22ymax%22%3A90%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%2C%22latestWkid%22%3A4326%7D%7D%7D'
+
+		map.addLayer({
+			'id':'latest_heat_perimeter',
+			'type':'fill',
+			'source':{
+				'type':'geojson',
+				'data':latest_URL
+			},
+			'layout':{
+				'visibility':inciweb
+			},
+			'paint':{
+				'fill-color':'blue',
+				'fill-opacity':0.3
+			}
+		})
+
+		const el = document.createElement('div');
+		const width  = 100; //marker.properties.iconSize[0];
+		const height = 100; //marker.properties.iconSize[1];
+		el.className = 'marker';
+		el.style.backgroundImage = `url(bbh2.png)`;
+		el.style.width = `${width}px`;
+		el.style.height = `${height}px`;
+		el.style.backgroundSize = '100%';
+		 
+		// Add markers to the map.
+		function addMarker(){
+			const marker = new mapboxgl.Marker(el)
+				.setLngLat([-111.24194072,46.46461690])
+				.addTo(map);
+		}
+
+		addMarker()
+		updateFilter()
+
+	});
+
+</script>
+ </body>
+</html>
