@@ -175,8 +175,11 @@
 		pitch: 67,
 		bearing: -68,
 		hash: true,
-		style: 'mapbox://styles/mapbox-map-design/ckhqrf2tz0dt119ny6azh975y'
-	});
+		style: 'mapbox://styles/mapbox-map-design/ckhqrf2tz0dt119ny6azh975y',
+		attributionControl: false
+	}).addControl(new mapboxgl.AttributionControl({
+		customAttribution: 'Data from ftp.wildfire.gov & inciweb.nwcg.gov'
+	}));;
 
 	 
 	map.on('load', () => {
